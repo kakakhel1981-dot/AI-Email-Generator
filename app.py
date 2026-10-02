@@ -1,151 +1,10 @@
-# ============================================================
-# AI EMAIL GENERATOR v3.6
-# Google Colab + Streamlit + Gemini
-# ============================================================
-
-# ------------------------------------------------------------
-# 1. Install Required Packages
-# ------------------------------------------------------------
-
-
-
-
-# ------------------------------------------------------------
-# 2. Import Libraries
-# ------------------------------------------------------------
-
-from google.colab import userdata
-from google import genai
 import os
-import time
-
-
-# ------------------------------------------------------------
-# 3. Get Gemini API Key from Colab Secrets
-# ------------------------------------------------------------
-
-try:
-    API_KEY = userdata.get("GEMINI_API_KEY")
-
-except Exception:
-    API_KEY = None
-
-
-if not API_KEY:
-
-    raise ValueError(
-        """
-        ❌ GEMINI_API_KEY was not found.
-
-        Please do the following:
-
-        1. Open the Secrets 🔑 panel in Google Colab.
-        2. Create a secret named:
-
-           GEMINI_API_KEY
-
-        3. Enter your Gemini API key.
-        4. Enable notebook access.
-        5. Run this cell again.
-        """
-    )
-
-
-print("✅ Gemini API key found.")
-
-
-# ------------------------------------------------------------
-# 4. Create Gemini Client
-# ------------------------------------------------------------
-
-client = genai.Client(
-    api_key=API_KEY
-)
-
-print("✅ Gemini client initialized.")
-
-
-# ------------------------------------------------------------
-# 5. Model Configuration - Version 3.6
-# ------------------------------------------------------------
-
-PRIMARY_MODEL = "gemini-3.6-flash"
-
-# Fallback model in case Gemini 3.6 is temporarily unavailable
-FALLBACK_MODEL = "gemini-2.5-flash"
-
-print(f"🚀 Primary Model: {PRIMARY_MODEL}")
-print(f"🔄 Fallback Model: {FALLBACK_MODEL}")
-
-
-# ------------------------------------------------------------
-# 6. Test Gemini API
-# ------------------------------------------------------------
-
-print("\n" + "=" * 65)
-print("TESTING GEMINI API")
-print("=" * 65)
-
-try:
-
-    test_response = client.models.generate_content(
-        model=PRIMARY_MODEL,
-        contents="Write one short professional email greeting."
-    )
-
-    ACTIVE_MODEL = PRIMARY_MODEL
-
-    print("\n✅ Gemini 3.6 Flash is available.")
-    print("\nTest Response:")
-    print(test_response.text)
-
-
-except Exception as e:
-
-    print("\n⚠️ Gemini 3.6 Flash is temporarily unavailable.")
-    print("Reason:", str(e))
-
-    print("\n🔄 Trying fallback model...")
-
-    try:
-
-        test_response = client.models.generate_content(
-            model=FALLBACK_MODEL,
-            contents="Write one short professional email greeting."
-        )
-
-        ACTIVE_MODEL = FALLBACK_MODEL
-
-        print("\n✅ Fallback model is working.")
-        print(f"Active Model: {ACTIVE_MODEL}")
-
-        print("\nTest Response:")
-        print(test_response.text)
-
-    except Exception as fallback_error:
-
-        print("\n❌ Both Gemini models failed.")
-
-        print("\nPrimary Model Error:")
-        print(e)
-
-        print("\nFallback Model Error:")
-        print(fallback_error)
-
-        raise
-
-
-# ============================================================
-# 7. Create Streamlit Application
-# ============================================================
-
-app_code = r'''
 import streamlit as st
 from google import genai
 
-
 # ============================================================
 # AI EMAIL GENERATOR v3.6
+# Developed by Shahzad Amin
 # ============================================================
 
 st.set_page_config(
@@ -154,49 +13,47 @@ st.set_page_config(
     layout="centered"
 )
 
+# ============================================================
+# APPLICATION HEADER
+# ============================================================
 
-# ------------------------------------------------------------
-# API Configuration
-# ------------------------------------------------------------
+st.title("✉️ AI Email Generator")
+st.subheader("Generate professional emails with AI")
+
+st.write(
+    "Enter the email details below and Gemini will generate "
+    "a complete, professional, ready-to-use email."
+)
+
+# ============================================================
+# GEMINI API CONFIGURATION
+# ============================================================
 
 try:
-
-    from google.colab import userdata
-
-    API_KEY = userdata.get("GEMINI_API_KEY")
-
-except ImportError:
-
     API_KEY = st.secrets["GEMINI_API_KEY"]
-
+except Exception:
+    API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if not API_KEY:
+    st.error("❌ Gemini API key was not found.")
 
-    st.error("Gemini API key was not found.")
+    st.info(
+        "Please add GEMINI_API_KEY in "
+        "Streamlit Cloud → App Settings → Secrets."
+    )
 
     st.stop()
 
+# Create Gemini client
+client = genai.Client(api_key=API_KEY)
 
-# ------------------------------------------------------------
-# Gemini Client
-# ------------------------------------------------------------
-
-client = genai.Client(
-    api_key=API_KEY
-)
+# Use a generally available model
+PRIMARY_MODEL = "gemini-2.5-flash"
 
 
-# ------------------------------------------------------------
-# Model Configuration
-# ------------------------------------------------------------
-
-PRIMARY_MODEL = "gemini-3.6-flash"
-FALLBACK_MODEL = "gemini-2.5-flash"
-
-
-# ------------------------------------------------------------
-# Generate Email Function
-# ------------------------------------------------------------
+# ============================================================
+# EMAIL GENERATION FUNCTION
+# ============================================================
 
 def generate_email(
     recipient,
@@ -205,103 +62,121 @@ def generate_email(
     tone,
     length
 ):
+    """
+    Generate an email using the Gemini API.
+    """
 
     # --------------------------------------------------------
-    # Detailed Tone Instructions
+    # TONE INSTRUCTIONS
     # --------------------------------------------------------
 
     tone_instructions = {
 
-        "Professional":
-        """
-        Use a professional business communication style.
-        Keep the language clear, respectful, structured,
-        and appropriate for workplace communication.
-        Avoid unnecessary casual expressions.
-        """,
+        "Professional": """
+Use a professional business communication style.
 
-        "Formal":
-        """
-        Use a highly formal and polished business style.
-        Use respectful language, complete sentences,
-        and formal business terminology.
-        Avoid contractions and casual expressions.
-        """,
+The email should be:
+- Clear
+- Respectful
+- Structured
+- Professional
+- Appropriate for workplace communication
 
-        "Friendly":
-        """
-        Use a warm, positive, and approachable tone.
-        The email should remain professional but should
-        feel natural and friendly.
-        """,
+Avoid unnecessary casual expressions.
+""",
 
-        "Polite":
-        """
-        Use a very courteous and respectful tone.
-        Make requests diplomatically and avoid language
-        that could sound demanding or harsh.
-        """,
+        "Formal": """
+Use a highly formal and polished business style.
 
-        "Casual":
-        """
-        Use a relaxed and natural communication style.
-        Keep the email clear and friendly while avoiding
-        language that is inappropriate for the context.
-        """
+The email should:
+- Use formal business language
+- Use complete sentences
+- Be respectful and precise
+- Avoid contractions
+- Avoid casual expressions
+""",
+
+        "Friendly": """
+Use a warm, positive, and approachable tone.
+
+The email should:
+- Feel natural and friendly
+- Remain professional
+- Use positive language
+- Maintain a respectful business tone
+""",
+
+        "Polite": """
+Use a very courteous and respectful tone.
+
+The email should:
+- Make requests diplomatically
+- Avoid demanding language
+- Avoid harsh expressions
+- Clearly communicate the request
+""",
+
+        "Casual": """
+Use a relaxed and natural communication style.
+
+The email should:
+- Be easy to read
+- Sound friendly
+- Avoid unnecessarily formal language
+- Remain appropriate for the recipient and purpose
+"""
     }
 
-
     # --------------------------------------------------------
-    # Detailed Length Instructions
+    # LENGTH INSTRUCTIONS
     # --------------------------------------------------------
 
     length_instructions = {
 
-        "Short":
-        """
-        Keep the email concise.
-        Use approximately 3 to 6 sentences.
-        Include only the essential information.
-        """,
+        "Short": """
+Keep the email concise.
 
-        "Medium":
-        """
-        Provide a balanced email with enough context.
-        Use approximately 2 to 4 short paragraphs.
-        Include all important points without unnecessary detail.
-        """,
+Requirements:
+- Approximately 3–6 sentences
+- Include only essential information
+- Avoid unnecessary explanation
+""",
 
-        "Detailed":
-        """
-        Provide a comprehensive and well-structured email.
-        Explain the situation clearly and address all provided
-        key points. Use multiple paragraphs where appropriate.
-        Do not add information that was not provided.
-        """
+        "Medium": """
+Provide a balanced email.
+
+Requirements:
+- Approximately 2–4 short paragraphs
+- Include sufficient context
+- Cover all important points
+- Avoid unnecessary detail
+""",
+
+        "Detailed": """
+Provide a comprehensive and well-structured email.
+
+Requirements:
+- Use multiple paragraphs where appropriate
+- Address all important key points
+- Provide sufficient context
+- Maintain clarity
+- Do not add information that was not provided
+"""
     }
 
-
-    selected_tone_instruction = tone_instructions.get(
-        tone,
-        tone_instructions["Professional"]
-    )
-
-
-    selected_length_instruction = length_instructions.get(
-        length,
-        length_instructions["Medium"]
-    )
-
+    selected_tone = tone_instructions[tone]
+    selected_length = length_instructions[length]
 
     # --------------------------------------------------------
-    # AI Prompt
+    # AI PROMPT
     # --------------------------------------------------------
 
     prompt = f"""
 You are an advanced AI Email Generator.
 
-Your task is to create a high-quality email based strictly
-on the information provided by the user.
+Your task is to create a professional, clear, accurate,
+and ready-to-send email based strictly on the information
+provided by the user.
 
 ============================================================
 EMAIL INFORMATION
@@ -310,7 +185,7 @@ EMAIL INFORMATION
 Recipient:
 {recipient}
 
-Purpose:
+Email Purpose:
 {purpose}
 
 Key Points:
@@ -323,22 +198,22 @@ Selected Length:
 {length}
 
 ============================================================
-TONE INSTRUCTIONS
+TONE REQUIREMENTS
 ============================================================
 
-{selected_tone_instruction}
+{selected_tone}
 
 ============================================================
-LENGTH INSTRUCTIONS
+LENGTH REQUIREMENTS
 ============================================================
 
-{selected_length_instruction}
+{selected_length}
 
 ============================================================
 EMAIL GENERATION RULES
 ============================================================
 
-1. Generate a clear and relevant email subject.
+1. Generate a clear and relevant subject.
 
 2. Write a complete email body.
 
@@ -348,31 +223,38 @@ EMAIL GENERATION RULES
 
 5. Include all important key points provided by the user.
 
-6. Do not invent facts, names, dates, numbers,
-   commitments, or technical information.
+6. Do not invent facts.
 
-7. Do not change the meaning of the user's information.
+7. Do not invent names.
 
-8. Maintain the selected tone throughout the email.
+8. Do not invent dates.
 
-9. Follow the selected email length.
+9. Do not invent numbers.
 
-10. Use proper grammar and professional English.
+10. Do not invent commitments.
 
-11. Use paragraphs where appropriate.
+11. Do not invent technical information.
 
-12. Make the email ready to copy and send.
+12. Do not change the meaning of the user's information.
 
-13. Include an appropriate professional closing.
+13. Maintain the selected tone throughout the email.
 
-14. Do not provide explanations about how you generated
-    the email.
+14. Follow the selected email length.
+
+15. Use correct grammar and professional English.
+
+16. Use paragraphs where appropriate.
+
+17. Make the email ready to copy and send.
+
+18. Include an appropriate professional closing.
+
+19. Do not provide an explanation about how the email
+    was generated.
 
 ============================================================
-OUTPUT FORMAT
+REQUIRED OUTPUT FORMAT
 ============================================================
-
-Return ONLY the following format:
 
 Subject:
 <generated subject>
@@ -381,86 +263,38 @@ Email:
 <complete email body>
 """
 
-
     # --------------------------------------------------------
-    # Try Primary Model
+    # GEMINI API CALL
     # --------------------------------------------------------
 
-    try:
+    response = client.models.generate_content(
+        model=PRIMARY_MODEL,
+        contents=prompt
+    )
 
-        response = client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=prompt
+    if not response.text:
+        raise Exception(
+            "Gemini returned an empty response."
         )
 
-        return response.text, PRIMARY_MODEL
-
-
-    # --------------------------------------------------------
-    # Fallback Model
-    # --------------------------------------------------------
-
-    except Exception as primary_error:
-
-        try:
-
-            response = client.models.generate_content(
-                model=FALLBACK_MODEL,
-                contents=prompt
-            )
-
-            return response.text, FALLBACK_MODEL
-
-        except Exception as fallback_error:
-
-            raise Exception(
-                f"""
-                Primary model error:
-                {primary_error}
-
-                Fallback model error:
-                {fallback_error}
-                """
-            )
+    return response.text
 
 
 # ============================================================
-# STREAMLIT USER INTERFACE
+# USER INPUT SECTION
 # ============================================================
 
-st.title("✉️ AI Email Generator")
-
-st.subheader("Generate professional emails with AI")
-
-st.write(
-    "Enter the email details below and Gemini will generate "
-    "a complete email for you."
-)
-
-
-# ------------------------------------------------------------
-# Recipient
-# ------------------------------------------------------------
+st.markdown("### 📧 Email Details")
 
 recipient = st.text_input(
     "Recipient",
     placeholder="e.g., IT Support Team"
 )
 
-
-# ------------------------------------------------------------
-# Email Purpose
-# ------------------------------------------------------------
-
 purpose = st.text_input(
     "Email Purpose",
     placeholder="e.g., Request technical support"
 )
-
-
-# ------------------------------------------------------------
-# Key Points
-# ------------------------------------------------------------
 
 key_points = st.text_area(
     "Key Points",
@@ -471,10 +305,9 @@ key_points = st.text_area(
     height=150
 )
 
-
-# ------------------------------------------------------------
-# Email Tone
-# ------------------------------------------------------------
+# ============================================================
+# EMAIL TONE
+# ============================================================
 
 tone = st.selectbox(
     "Email Tone",
@@ -487,10 +320,9 @@ tone = st.selectbox(
     ]
 )
 
-
-# ------------------------------------------------------------
-# Email Length
-# ------------------------------------------------------------
+# ============================================================
+# EMAIL LENGTH
+# ============================================================
 
 length = st.selectbox(
     "Email Length",
@@ -501,10 +333,9 @@ length = st.selectbox(
     ]
 )
 
-
-# ------------------------------------------------------------
-# Generate Email Button
-# ------------------------------------------------------------
+# ============================================================
+# GENERATE EMAIL BUTTON
+# ============================================================
 
 if st.button(
     "✨ Generate Email",
@@ -512,31 +343,31 @@ if st.button(
 ):
 
     # --------------------------------------------------------
-    # Input Validation
+    # INPUT VALIDATION
     # --------------------------------------------------------
 
-    if not recipient:
+    if not recipient.strip():
 
         st.warning(
-            "Please enter the recipient."
+            "⚠️ Please enter the recipient."
         )
 
-    elif not purpose:
+    elif not purpose.strip():
 
         st.warning(
-            "Please enter the email purpose."
+            "⚠️ Please enter the email purpose."
         )
 
-    elif not key_points:
+    elif not key_points.strip():
 
         st.warning(
-            "Please enter the key points."
+            "⚠️ Please enter the key points."
         )
 
     else:
 
         # ----------------------------------------------------
-        # Generate Email
+        # GENERATE EMAIL
         # ----------------------------------------------------
 
         with st.spinner(
@@ -545,7 +376,7 @@ if st.button(
 
             try:
 
-                result, model_used = generate_email(
+                generated_email = generate_email(
                     recipient=recipient,
                     purpose=purpose,
                     key_points=key_points,
@@ -553,136 +384,56 @@ if st.button(
                     length=length
                 )
 
-
                 # ------------------------------------------------
-                # Success Message
+                # SUCCESS MESSAGE
                 # ------------------------------------------------
 
                 st.success(
                     "✅ Email generated successfully!"
                 )
 
-
                 # ------------------------------------------------
-                # Model Information
-                # ------------------------------------------------
-
-                st.caption(
-                    f"Generated using: {model_used}"
-                )
-
-
-                # ------------------------------------------------
-                # Display Generated Email
+                # DISPLAY RESULT
                 # ------------------------------------------------
 
                 st.text_area(
                     "Generated Email",
-                    value=result,
+                    value=generated_email,
                     height=450
                 )
 
-
-                # ------------------------------------------------
-                # Copy-friendly output
-                # ------------------------------------------------
-
                 st.info(
-                    "You can copy the generated email "
-                    "from the text box above."
+                    "💡 Copy the generated email from "
+                    "the text box above."
                 )
 
-
-            except Exception as e:
+            except Exception as error:
 
                 st.error(
                     "❌ Unable to generate the email."
                 )
 
-                st.exception(e)
+                st.warning(
+                    "Please check your Gemini API key "
+                    "and try again."
+                )
+
+                with st.expander(
+                    "Technical Error Details"
+                ):
+
+                    st.code(
+                        str(error)
+                    )
 
 
-# ------------------------------------------------------------
-# Footer
-# ------------------------------------------------------------
+# ============================================================
+# FOOTER
+# ============================================================
 
 st.divider()
 
 st.caption(
-    "AI Email Generator v3.6 | Powered by Gemini"
+    "AI Email Generator v3.6 | Powered by Gemini | "
+    "Developed by Shahzad Amin"
 )
-'''
-
-
-# ------------------------------------------------------------
-# 8. Write app.py
-# ------------------------------------------------------------
-
-with open("/content/app.py", "w") as f:
-    f.write(app_code)
-
-
-print("\n" + "=" * 65)
-print("STREAMLIT APPLICATION CREATED")
-print("=" * 65)
-
-print("\n✅ app.py created successfully.")
-print("📁 Location: /content/app.py")
-
-
-# ------------------------------------------------------------
-# 9. Create requirements.txt
-# ------------------------------------------------------------
-
-requirements = """
-streamlit
-google-genai
-"""
-
-with open("/content/requirements.txt", "w") as f:
-    f.write(requirements.strip())
-
-
-print("✅ requirements.txt created successfully.")
-
-
-# ------------------------------------------------------------
-# 10. Start Streamlit
-# ------------------------------------------------------------
-
-print("\n🚀 Starting Streamlit...")
-
-!pkill -f "streamlit run" || true
-
-!streamlit run /content/app.py > /content/streamlit.log 2>&1 &
-
-
-# ------------------------------------------------------------
-# 11. Wait for Streamlit
-# ------------------------------------------------------------
-
-import time
-
-time.sleep(5)
-
-print("\n✅ Streamlit server started.")
-print("🌐 Port: 8501")
-
-
-# ------------------------------------------------------------
-# 12. Install Cloudflare Tunnel
-# ------------------------------------------------------------
-
-!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /content/cloudflared
-!chmod +x /content/cloudflared
-
-
-# ------------------------------------------------------------
-# 13. Start Cloudflare Tunnel
-# ------------------------------------------------------------
-
-print("\n" + "=" * 65)
-print("STREAMLIT APPLICATION URL")
-print("=" * 65)
-
-! /content/cloudflared tunnel --url http://localhost:8501
