@@ -85,13 +85,13 @@ try:
 
 except Exception as error:
 
-    st.error(
-        "❌ Unable to initialize Gemini."
-    )
+    st.error("❌ Unable to generate the email.")
 
-    st.code(str(error))
+    st.error(f"Gemini API Error: {str(error)}")
 
-    st.stop()
+    with st.expander("🔍 Technical Error Details"):
+
+        st.exception(error)
 
 
 # ============================================================
