@@ -37,7 +37,7 @@ st.set_page_config(
 st.title("✉️ AI Email Generator")
 
 st.subheader(
-    "Generate professional emails with AI"
+    "Generate professional emails with AI,Developed by Shahzad Amin"
 )
 
 st.write(
