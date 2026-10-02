@@ -34,15 +34,27 @@ st.set_page_config(
 # HEADER
 # ============================================================
 
-st.title("✉️ AI Email Generator")
+# ============================================================
+# APPLICATION HEADER
+# ============================================================
 
-st.subheader(
-    "Generate professional emails with AI,Developed by Shahzad Amin"
+st.markdown(
+    '<div class="main-title">✉️ AI Email Generator</div>',
+    unsafe_allow_html=True
 )
 
-st.write(
-    "Enter the email details below and Gemini will generate "
-    "a complete, professional, ready-to-use email."
+st.markdown(
+    '<div class="subtitle">'
+    'Generate professional emails quickly and easily with AI'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="developer">'
+    '✨ AI Email Generator App — Developed by Shahzad Amin'
+    '</div>',
+    unsafe_allow_html=True
 )
 
 
