@@ -98,7 +98,7 @@ except Exception as error:
 # GEMINI MODEL
 # ============================================================
 
-PRIMARY_MODEL = "gemini-2.5-flash"
+PRIMARY_MODEL = "gemini-3.6-flash"
 
 
 # ============================================================
